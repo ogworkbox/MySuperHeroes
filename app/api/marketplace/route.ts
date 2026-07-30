@@ -1,14 +1,14 @@
 import { NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
 
-// GET: Fetch active marketplace listings safely
+// GET: Fetch active marketplace listings safely using the 'username' column
 export async function GET() {
   const { data, error } = await supabase
     .from('marketplace_listings')
     .select(`
       *,
       cards (*),
-      profiles:seller_id (name)
+      profiles:seller_id (username)
     `)
     .eq('status', 'active');
 
