@@ -3,9 +3,10 @@ import { supabase } from '@/lib/supabase';
 
 export const dynamic = 'force-dynamic'; // Forces Next.js to fetch fresh data every time
 
-// GET: Fetch active marketplace listings safely using the 'username' column
+// GET: Fetch active marketplace listings and pending trade offers with all associated cards
 export async function GET() {
-  const { data, error } = await supabase
+  // 1. Fetch active marketplace listings with their cards
+  const { data: listings, error: listingError } = await supabase
     .from('marketplace_listings')
     .select(`
       *,
@@ -13,11 +14,30 @@ export async function GET() {
     `)
     .eq('status', 'active');
 
-  if (error) {
-    return NextResponse.json({ success: false, error: error.message }, { status: 400 });
+  if (listingError) {
+    return NextResponse.json({ success: false, error: listingError.message }, { status: 400 });
   }
 
-  return NextResponse.json({ success: true, listings: data });
+  // 2. Fetch pending trade offers with the listing info, target card, and offered items
+  const { data: offers, error: offerError } = await supabase
+    .from('trade_offers')
+    .select(`
+      *,
+      marketplace_listings (
+        *,
+        cards (*)
+      ),
+      trade_offer_items (
+        cards (*)
+      )
+    `)
+    .eq('status', 'pending');
+
+  if (offerError) {
+    return NextResponse.json({ success: false, error: offerError.message }, { status: 400 });
+  }
+
+  return NextResponse.json({ success: true, listings, offers });
 }
 
 // POST: Handle listing creation, unlisting, trade offers, accepting, and declining
