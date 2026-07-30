@@ -64,16 +64,17 @@ export default function Dashboard() {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
 
-    const res = await fetch('/api/marketplace', {
+const res = await fetch('/api/marketplace', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ action: 'list', cardId, userId: user.id }),
     });
     const data = await res.json();
     if (data.success) {
-      alert('Card successfully listed on the marketplace! 🏪');
+      // Refresh your local card state or trigger your UI state message here
+      console.log('Card successfully listed on the marketplace! 🏪');
     } else {
-      alert('Error: ' + data.error);
+      console.error('Error: ' + data.error);
     }
   };
 
