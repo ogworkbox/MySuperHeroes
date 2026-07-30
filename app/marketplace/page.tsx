@@ -130,6 +130,25 @@ export default function MarketplacePage() {
     }
   };
 
+  const handleUnlist = async (listingId: string) => {
+    const res = await fetch('/api/marketplace', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        action: 'unlist',
+        listingId: listingId
+      })
+    });
+
+    const data = await res.json();
+    if (data.success) {
+      showMessage('Listing removed successfully! 🗑️', 'success');
+      fetchListings();
+    } else {
+      showMessage('Error: ' + data.error, 'error');
+    }
+  };
+
   return (
     <main className="max-w-6xl mx-auto p-6 bg-slate-900 text-slate-100 min-h-screen">
       <header className="flex flex-col md:flex-row justify-between items-center mb-8 bg-slate-800 p-6 rounded-2xl border border-slate-700 gap-4">
@@ -200,12 +219,21 @@ export default function MarketplacePage() {
                   <p className="text-xs text-slate-400 mb-4">Seller ID: {item.seller_id?.slice(0, 8)}...</p>
                 </div>
 
-                <button 
-                  onClick={() => setSelectedListing(item)}
-                  className="w-full bg-purple-600 hover:bg-purple-500 text-white py-2.5 rounded-xl font-bold transition shadow-md"
-                >
-                  Propose Trade 🤝
-                </button>
+                {item.seller_id === userId ? (
+                  <button 
+                    onClick={() => handleUnlist(item.id)}
+                    className="w-full bg-red-500/10 hover:bg-red-500 text-red-400 hover:text-white border border-red-500/30 py-2.5 rounded-xl font-bold transition shadow-md"
+                  >
+                    Remove Listing 🗑️
+                  </button>
+                ) : (
+                  <button 
+                    onClick={() => setSelectedListing(item)}
+                    className="w-full bg-purple-600 hover:bg-purple-500 text-white py-2.5 rounded-xl font-bold transition shadow-md"
+                  >
+                    Propose Trade 🤝
+                  </button>
+                )}
               </div>
             ))}
           </div>
