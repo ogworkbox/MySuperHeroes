@@ -24,20 +24,20 @@ export async function POST(request: Request) {
     const body = await request.json();
     const { action, cardId, sellerId, listingId, buyerId, offeredCardIds, offerId } = body;
 
-    // 1. List a card for trade
+// 1. List a card for trade
     if (action === 'list') {
       const { error } = await supabase
         .from('marketplace_listings')
         .insert({
           card_id: cardId,
-          seller_id: sellerId,
+          seller_id: body.seller_id || body.userId, // <--- Handles both names securely
           status: 'active'
         });
 
       if (error) return NextResponse.json({ success: false, error: error.message }, { status: 400 });
       return NextResponse.json({ success: true });
     }
-
+    
     // 2. Submit a trade offer
     if (action === 'offer') {
       const { data: offerData, error: offerError } = await supabase
