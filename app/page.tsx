@@ -15,7 +15,7 @@ export default function Home() {
         <p className="text-slate-300 text-base mb-8 leading-relaxed">
           The ultimate safe trading and collection adventure. Create epic heroes, unlock legendary tiers, and connect securely with your schoolmates!
         </p>
-        
+
         <button
           onClick={() => router.push('/login')}
           className="w-full bg-amber-500 hover:bg-amber-600 text-slate-950 font-extrabold p-4 rounded-xl text-lg transition-all shadow-lg transform hover:-translate-y-0.5"
