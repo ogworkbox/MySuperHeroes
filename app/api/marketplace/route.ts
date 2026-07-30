@@ -1,9 +1,11 @@
 import { NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
 
+export const dynamic = 'force-dynamic'; // Forces Next.js to fetch fresh data every time
+
 // GET: Fetch active marketplace listings safely using the 'username' column
 export async function GET() {
-  const { data, error } = await supabase
+const { data, error } = await supabase
     .from('marketplace_listings')
     .select(`
       *,
