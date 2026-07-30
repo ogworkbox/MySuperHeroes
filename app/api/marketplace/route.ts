@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
 
-// GET: Fetch active marketplace listings with seller profile/username
+// GET: Fetch active marketplace listings safely
 export async function GET() {
   const { data, error } = await supabase
     .from('marketplace_listings')
