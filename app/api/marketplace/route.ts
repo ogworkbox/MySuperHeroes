@@ -19,6 +19,7 @@ export async function GET() {
 
   return NextResponse.json({ success: true, listings: data });
 }
+
 // POST: Handle listing creation, unlisting, trade offers, accepting, and declining
 export async function POST(request: Request) {
   try {
@@ -106,7 +107,7 @@ export async function POST(request: Request) {
         .from('trade_offers')
         .select(`
           *,
-          listings:listing_id (
+          marketplace_listings:listing_id (
             id,
             seller_id,
             card_id
@@ -115,33 +116,53 @@ export async function POST(request: Request) {
         .eq('id', offerId)
         .single();
 
-      if (fetchError || !offer) {
-        return NextResponse.json({ success: false, error: 'Trade offer not found.' }, { status: 400 });
+      // Fallback check if alias maps differently depending on schema relations
+      const listingData = offer?.marketplace_listings || (offer as any)?.listings;
+
+      if (fetchError || !offer || !listingData) {
+        return NextResponse.json({ success: false, error: 'Trade offer or associated listing not found.' }, { status: 400 });
       }
 
-      const sId = offer.listings.seller_id;
+      const sId = listingData.seller_id;
       const bId = offer.buyer_id;
-      const listedCardId = offer.listings.card_id;
+      const listedCardId = listingData.card_id;
 
       const { data: offeredItems } = await supabase
         .from('trade_offer_items')
         .select('card_id')
         .eq('trade_offer_id', offerId);
 
-      // Swap listed card to buyer
-      await supabase.from('cards').update({ user_id: bId }).eq('id', listedCardId);
+      // Swap listed card ownership to the buyer
+      const { error: listedCardError } = await supabase
+        .from('cards')
+        .update({ user_id: bId })
+        .eq('id', listedCardId);
 
-      // Swap offered cards to seller
+      if (listedCardError) {
+        return NextResponse.json({ success: false, error: `Failed to transfer listed card: ${listedCardError.message}` }, { status: 400 });
+      }
+
+      // Swap offered cards ownership to the seller
       if (offeredItems && offeredItems.length > 0) {
         for (const item of offeredItems) {
-          await supabase.from('cards').update({ user_id: sId }).eq('id', item.card_id);
+          const { error: offeredCardError } = await supabase
+            .from('cards')
+            .update({ user_id: sId })
+            .eq('id', item.card_id);
+
+          if (offeredCardError) {
+            return NextResponse.json({ success: false, error: `Failed to transfer offered card: ${offeredCardError.message}` }, { status: 400 });
+          }
         }
       }
 
+      // Update trade offer status to accepted
       await supabase.from('trade_offers').update({ status: 'accepted' }).eq('id', offerId);
-      await supabase.from('marketplace_listings').update({ status: 'completed' }).eq('id', offer.listings.id);
+      
+      // Update marketplace listing status to completed
+      await supabase.from('marketplace_listings').update({ status: 'completed' }).eq('id', listingData.id);
 
-      return NextResponse.json({ success: true });
+      return NextResponse.json({ success: true, message: 'Trade successfully accepted and cards transferred!' });
     }
 
     return NextResponse.json({ success: false, error: 'Invalid action specified.' }, { status: 400 });
