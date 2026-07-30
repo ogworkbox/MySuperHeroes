@@ -24,20 +24,44 @@ export async function POST(request: Request) {
     const body = await request.json();
     const { action, cardId, sellerId, listingId, buyerId, offeredCardIds, offerId } = body;
 
-// 1. List a card for trade
+// 1. List a card for trade (with duplicate check)
     if (action === 'list') {
+      const sId = body.seller_id || body.userId;
+
+      // Check if this card is already actively listed
+      const { data: existingListing } = await supabase
+        .from('marketplace_listings')
+        .select('id')
+        .eq('card_id', cardId)
+        .eq('status', 'active')
+        .single();
+
+      if (existingListing) {
+        return NextResponse.json({ success: false, error: 'This card is already listed in the marketplace.' }, { status: 400 });
+      }
+
       const { error } = await supabase
         .from('marketplace_listings')
         .insert({
           card_id: cardId,
-          seller_id: body.seller_id || body.userId, // <--- Handles both names securely
+          seller_id: sId,
           status: 'active'
         });
 
       if (error) return NextResponse.json({ success: false, error: error.message }, { status: 400 });
       return NextResponse.json({ success: true });
     }
-    
+
+    // 1b. Remove/Cancel an active listing
+    if (action === 'unlist') {
+      const { error } = await supabase
+        .from('marketplace_listings')
+        .update({ status: 'cancelled' })
+        .eq('id', listingId);
+
+      if (error) return NextResponse.json({ success: false, error: error.message }, { status: 400 });
+      return NextResponse.json({ success: true });
+    }
     // 2. Submit a trade offer
     if (action === 'offer') {
       const { data: offerData, error: offerError } = await supabase
