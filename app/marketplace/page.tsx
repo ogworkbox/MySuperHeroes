@@ -28,25 +28,31 @@ export default function MarketplacePage() {
       if (user) {
         setUserId(user.id);
         fetchMyCards(user.id);
-        fetchIncomingOffers(user.id);
       }
-      fetchListings();
+      fetchListingsAndOffers();
     }
     initMarketplace();
   }, []);
 
-  const fetchListings = async () => {
+  const fetchListingsAndOffers = async () => {
     try {
       const res = await fetch('/api/marketplace');
       const data = await res.json();
-      if (data && data.success && Array.isArray(data.listings)) {
-        setListings(data.listings);
+      if (data && data.success) {
+        setListings(Array.isArray(data.listings) ? data.listings : []);
+        
+        // Filter offers where the current listing belongs to the logged-in user
+        const allOffers = Array.isArray(data.offers) ? data.offers : [];
+        const myOffers = allOffers.filter((offer: any) => offer.marketplace_listings?.seller_id === userId);
+        setIncomingOffers(myOffers);
       } else {
         setListings([]);
+        setIncomingOffers([]);
       }
     } catch (err) {
-      console.error('Failed to fetch listings', err);
+      console.error('Failed to fetch marketplace data', err);
       setListings([]);
+      setIncomingOffers([]);
     } finally {
       setLoading(false);
     }
@@ -55,24 +61,6 @@ export default function MarketplacePage() {
   const fetchMyCards = async (currentUserId: string) => {
     const { data } = await supabase.from('cards').select('*').eq('user_id', currentUserId);
     setMyCards(data || []);
-  };
-
-  const fetchIncomingOffers = async (currentUserId: string) => {
-    const { data, error } = await supabase
-      .from('trade_offers')
-      .select(`
-        *,
-        listings:listing_id (
-          *,
-          cards (*)
-        )
-      `)
-      .eq('listings.seller_id', currentUserId)
-      .eq('status', 'pending');
-
-    if (!error && data) {
-      setIncomingOffers(data);
-    }
   };
 
   const toggleCardSelection = (cardId: string) => {
@@ -105,6 +93,7 @@ export default function MarketplacePage() {
       showMessage('Trade offer sent successfully! 🤝', 'success');
       setSelectedListing(null);
       setSelectedCardsToOffer([]);
+      fetchListingsAndOffers();
     } else {
       showMessage('Error: ' + data.error, 'error');
     }
@@ -123,8 +112,8 @@ export default function MarketplacePage() {
     const data = await res.json();
     if (data.success) {
       showMessage(actionType === 'accept_offer' ? 'Trade accepted successfully! 🎉' : 'Trade offer declined.', 'success');
-      fetchIncomingOffers(userId);
-      fetchListings();
+      fetchListingsAndOffers();
+      if (userId) fetchMyCards(userId);
     } else {
       showMessage('Error: ' + data.error, 'error');
     }
@@ -143,7 +132,7 @@ export default function MarketplacePage() {
     const data = await res.json();
     if (data.success) {
       showMessage('Listing removed successfully! 🗑️', 'success');
-      fetchListings();
+      fetchListingsAndOffers();
     } else {
       showMessage('Error: ' + data.error, 'error');
     }
@@ -216,9 +205,6 @@ export default function MarketplacePage() {
                     <span className="text-sm font-semibold text-slate-400">{item.cards?.element || 'Unknown'}</span>
                   </div>
                   <h3 className="text-xl font-extrabold text-white truncate mb-2">{item.cards?.name || 'Unnamed Card'}</h3>
-                  <p className="text-xs text-slate-400 mb-4">
-                    Seller: {item.profiles?.username || item.profiles?.email?.split('@')[0] || 'Classmate'}
-                  </p>
                 </div>
 
                 {item.seller_id === userId ? (
@@ -248,31 +234,56 @@ export default function MarketplacePage() {
               No pending trade offers right now.
             </div>
           ) : (
-            incomingOffers.map((offer) => (
-              <div key={offer.id} className="bg-slate-800 border border-slate-700 p-5 rounded-2xl flex flex-col md:flex-row justify-between items-center gap-4">
-                <div>
-                  <p className="text-sm font-semibold text-white">
-                    Offer on your card: <span className="text-amber-400">{offer.listings?.cards?.name}</span>
-                  </p>
-                  <p className="text-xs text-slate-400 mt-1">Status: Pending your response</p>
-                </div>
+            incomingOffers.map((offer) => {
+              const targetCard = offer.marketplace_listings?.cards;
+              const offeredCards = offer.trade_offer_items?.map((item: any) => item.cards) || [];
 
-                <div className="flex gap-3 w-full md:w-auto">
-                  <button
-                    onClick={() => handleTradeAction(offer.id, 'accept_offer')}
-                    className="flex-1 md:flex-none bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-bold px-4 py-2 rounded-xl text-sm transition shadow"
-                  >
-                    Accept ✅
-                  </button>
-                  <button
-                    onClick={() => handleTradeAction(offer.id, 'decline_offer')}
-                    className="flex-1 md:flex-none bg-red-500/10 hover:bg-red-500 text-red-400 hover:text-white border border-red-500/30 font-bold px-4 py-2 rounded-xl text-sm transition"
-                  >
-                    Decline ❌
-                  </button>
+              return (
+                <div key={offer.id} className="bg-slate-800 border border-slate-700 p-5 rounded-2xl flex flex-col gap-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-center">
+                    {/* What they want (Your Card) */}
+                    <div className="bg-slate-900/60 p-3 rounded-xl border border-slate-700 flex items-center gap-3">
+                      <img src={targetCard?.image_url} alt={targetCard?.name} className="w-14 h-14 rounded-lg object-cover border border-slate-700" />
+                      <div>
+                        <p className="text-xs text-slate-400 font-semibold uppercase tracking-wider">They want your card:</p>
+                        <p className="text-base font-bold text-amber-400">{targetCard?.name || 'Card'} <span className="text-xs text-slate-400 font-normal">({targetCard?.rarity})</span></p>
+                      </div>
+                    </div>
+
+                    {/* What they are offering (Their Cards) */}
+                    <div className="bg-slate-900/60 p-3 rounded-xl border border-slate-700">
+                      <p className="text-xs text-slate-400 font-semibold uppercase tracking-wider mb-2">They are offering:</p>
+                      <div className="flex flex-wrap gap-2">
+                        {offeredCards.map((card: any) => (
+                          <div key={card?.id} className="flex items-center gap-2 bg-slate-800 border border-slate-700 p-1.5 rounded-lg">
+                            <img src={card?.image_url} alt={card?.name} className="w-10 h-10 rounded object-cover" />
+                            <div className="pr-2">
+                              <p className="text-xs font-bold text-white truncate max-w-[100px]">{card?.name}</p>
+                              <p className="text-[10px] text-purple-400">{card?.rarity}</p>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex justify-end gap-3 pt-2 border-t border-slate-700/60">
+                    <button
+                      onClick={() => handleTradeAction(offer.id, 'accept_offer')}
+                      className="bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-bold px-5 py-2 rounded-xl text-sm transition shadow"
+                    >
+                      Accept Trade ✅
+                    </button>
+                    <button
+                      onClick={() => handleTradeAction(offer.id, 'decline_offer')}
+                      className="bg-red-500/10 hover:bg-red-500 text-red-400 hover:text-white border border-red-500/30 font-bold px-5 py-2 rounded-xl text-sm transition"
+                    >
+                      Decline ❌
+                    </button>
+                  </div>
                 </div>
-              </div>
-            ))
+              );
+            })
           )}
         </div>
       )}
