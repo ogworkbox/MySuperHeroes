@@ -216,7 +216,7 @@ export default function MarketplacePage() {
                     <span className="text-sm font-semibold text-slate-400">{item.cards?.element || 'Unknown'}</span>
                   </div>
                   <h3 className="text-xl font-extrabold text-white truncate mb-2">{item.cards?.name || 'Unnamed Card'}</h3>
-                  <p className="text-xs text-slate-400 mb-4">Seller ID: {item.seller_id?.slice(0, 8)}...</p>
+                  <p className="text-xs text-slate-400 mb-4">Seller: {item.profiles?.username || 'Classmate'}</p>
                 </div>
 
                 {item.seller_id === userId ? (
