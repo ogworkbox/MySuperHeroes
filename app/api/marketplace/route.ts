@@ -22,9 +22,23 @@ export async function GET() {
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { action, listingId, buyerId, offeredCardIds, offerId } = body;
+    const { action, cardId, sellerId, listingId, buyerId, offeredCardIds, offerId } = body;
 
-    // 1. Submit a trade offer
+    // 1. List a card for trade
+    if (action === 'list') {
+      const { error } = await supabase
+        .from('marketplace_listings')
+        .insert({
+          card_id: cardId,
+          seller_id: sellerId,
+          status: 'active'
+        });
+
+      if (error) return NextResponse.json({ success: false, error: error.message }, { status: 400 });
+      return NextResponse.json({ success: true });
+    }
+
+    // 2. Submit a trade offer
     if (action === 'offer') {
       const { data: offerData, error: offerError } = await supabase
         .from('trade_offers')
@@ -38,20 +52,18 @@ export async function POST(request: Request) {
 
       if (offerError) return NextResponse.json({ success: false, error: offerError.message }, { status: 400 });
 
-      // Insert the offered cards into trade items table if you have one
       if (offeredCardIds && offeredCardIds.length > 0) {
-        const itemsToInsert = offeredCardIds.map((cardId: string) => ({
+        const itemsToInsert = offeredCardIds.map((cId: string) => ({
           trade_offer_id: offerData.id,
-          card_id: cardId
+          card_id: cId
         }));
-
         await supabase.from('trade_offer_items').insert(itemsToInsert);
       }
 
       return NextResponse.json({ success: true });
     }
 
-    // 2. Decline a trade offer
+    // 3. Decline a trade offer
     if (action === 'decline_offer') {
       const { error } = await supabase
         .from('trade_offers')
@@ -62,9 +74,8 @@ export async function POST(request: Request) {
       return NextResponse.json({ success: true });
     }
 
-    // 3. Accept a trade offer (Swaps card owners and closes the listing)
+    // 4. Accept a trade offer
     if (action === 'accept_offer') {
-      // Fetch the offer and related listing info
       const { data: offer, error: fetchError } = await supabase
         .from('trade_offers')
         .select(`
@@ -82,43 +93,27 @@ export async function POST(request: Request) {
         return NextResponse.json({ success: false, error: 'Trade offer not found.' }, { status: 400 });
       }
 
-      const sellerId = offer.listings.seller_id;
-      const buyerId = offer.buyer_id;
+      const sId = offer.listings.seller_id;
+      const bId = offer.buyer_id;
       const listedCardId = offer.listings.card_id;
 
-      // Fetch the cards being offered by the buyer
       const { data: offeredItems } = await supabase
         .from('trade_offer_items')
         .select('card_id')
         .eq('trade_offer_id', offerId);
 
-      // Swap the listed card to the buyer
-      await supabase
-        .from('cards')
-        .update({ user_id: buyerId })
-        .eq('id', listedCardId);
+      // Swap listed card to buyer
+      await supabase.from('cards').update({ user_id: bId }).eq('id', listedCardId);
 
-      // Swap the offered cards to the seller
+      // Swap offered cards to seller
       if (offeredItems && offeredItems.length > 0) {
         for (const item of offeredItems) {
-          await supabase
-            .from('cards')
-            .update({ user_id: sellerId })
-            .eq('id', item.card_id);
+          await supabase.from('cards').update({ user_id: sId }).eq('id', item.card_id);
         }
       }
 
-      // Mark trade offer as accepted
-      await supabase
-        .from('trade_offers')
-        .update({ status: 'accepted' })
-        .eq('id', offerId);
-
-      // Close/complete the marketplace listing
-      await supabase
-        .from('marketplace_listings')
-        .update({ status: 'completed' })
-        .eq('id', offer.listings.id);
+      await supabase.from('trade_offers').update({ status: 'accepted' }).eq('id', offerId);
+      await supabase.from('marketplace_listings').update({ status: 'completed' }).eq('id', offer.listings.id);
 
       return NextResponse.json({ success: true });
     }
