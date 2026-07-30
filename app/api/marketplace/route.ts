@@ -5,12 +5,11 @@ export const dynamic = 'force-dynamic'; // Forces Next.js to fetch fresh data ev
 
 // GET: Fetch active marketplace listings safely using the 'username' column
 export async function GET() {
-const { data, error } = await supabase
+  const { data, error } = await supabase
     .from('marketplace_listings')
     .select(`
       *,
-      cards (*),
-      profiles:seller_id (username)
+      cards (*)
     `)
     .eq('status', 'active');
 
@@ -20,7 +19,6 @@ const { data, error } = await supabase
 
   return NextResponse.json({ success: true, listings: data });
 }
-
 // POST: Handle listing creation, unlisting, trade offers, accepting, and declining
 export async function POST(request: Request) {
   try {
