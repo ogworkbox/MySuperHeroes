@@ -1,13 +1,14 @@
 import { NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
 
-// GET: Fetch active marketplace listings
+// GET: Fetch active marketplace listings with seller profile/username
 export async function GET() {
   const { data, error } = await supabase
     .from('marketplace_listings')
     .select(`
       *,
-      cards (*)
+      cards (*),
+      profiles:seller_id (username)
     `)
     .eq('status', 'active');
 
@@ -18,15 +19,15 @@ export async function GET() {
   return NextResponse.json({ success: true, listings: data });
 }
 
-// POST: Handle listing creation, trade offers, accepting, and declining
+// POST: Handle listing creation, unlisting, trade offers, accepting, and declining
 export async function POST(request: Request) {
   try {
     const body = await request.json();
     const { action, cardId, sellerId, listingId, buyerId, offeredCardIds, offerId } = body;
 
-// 1. List a card for trade (with duplicate check)
+    // 1. List a card for trade (with duplicate check)
     if (action === 'list') {
-      const sId = body.seller_id || body.userId;
+      const sId = sellerId || body.userId;
 
       // Check if this card is already actively listed
       const { data: existingListing } = await supabase
@@ -62,6 +63,7 @@ export async function POST(request: Request) {
       if (error) return NextResponse.json({ success: false, error: error.message }, { status: 400 });
       return NextResponse.json({ success: true });
     }
+
     // 2. Submit a trade offer
     if (action === 'offer') {
       const { data: offerData, error: offerError } = await supabase
