@@ -8,7 +8,7 @@ export async function GET() {
     .select(`
       *,
       cards (*),
-      profiles:seller_id (username)
+      profiles:seller_id (name)
     `)
     .eq('status', 'active');
 
