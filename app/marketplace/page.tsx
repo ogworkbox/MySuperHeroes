@@ -188,42 +188,48 @@ export default function MarketplacePage() {
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
-            {listings.map((item) => (
-              <div key={item.id} className="bg-slate-800 border-2 border-slate-700 rounded-2xl p-4 shadow-xl flex flex-col justify-between">
-                <div>
-                  <div className="w-full aspect-square bg-slate-950 rounded-xl mb-4 overflow-hidden border border-slate-700">
-                    {item.cards?.image_url ? (
-                      <img src={item.cards.image_url} alt={item.cards.name} className="w-full h-full object-cover" />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center text-xs text-slate-500">No Image</div>
-                    )}
+            {listings.map((item) => {
+              const isLegendary = item.cards?.rarity === 'Legendary';
+              return (
+                <div 
+                  key={item.id} 
+                  className={`bg-slate-800 border-2 border-slate-700 rounded-2xl p-4 shadow-xl flex flex-col justify-between transition-all duration-300 hover:scale-105 animate-float ${isLegendary ? 'hologram-shine overflow-hidden border-yellow-400/50 shadow-yellow-500/20' : ''}`}
+                >
+                  <div>
+                    <div className="w-full aspect-square bg-slate-950 rounded-xl mb-4 overflow-hidden border border-slate-700 flex justify-center items-center">
+                      {item.cards?.image_url ? (
+                        <img src={item.cards.image_url} alt={item.cards.name} className="h-full object-contain filter drop-shadow-[0_4px_8px_rgba(0,0,0,0.5)]" />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center text-xs text-slate-500">No Image</div>
+                      )}
+                    </div>
+                    <div className="flex justify-between items-start mb-2">
+                      <span className="text-xs font-bold uppercase tracking-widest bg-slate-900 px-2.5 py-1 rounded text-amber-400">
+                        {item.cards?.rarity || 'Common'}
+                      </span>
+                      <span className="text-sm font-semibold text-slate-400">{item.cards?.element || 'Unknown'}</span>
+                    </div>
+                    <h3 className="text-xl font-extrabold text-white truncate mb-2">{item.cards?.name || 'Unnamed Card'}</h3>
                   </div>
-                  <div className="flex justify-between items-start mb-2">
-                    <span className="text-xs font-bold uppercase tracking-widest bg-slate-900 px-2.5 py-1 rounded text-amber-400">
-                      {item.cards?.rarity || 'Common'}
-                    </span>
-                    <span className="text-sm font-semibold text-slate-400">{item.cards?.element || 'Unknown'}</span>
-                  </div>
-                  <h3 className="text-xl font-extrabold text-white truncate mb-2">{item.cards?.name || 'Unnamed Card'}</h3>
-                </div>
 
-                {item.seller_id === userId ? (
-                  <button 
-                    onClick={() => handleUnlist(item.id)}
-                    className="w-full bg-red-500/10 hover:bg-red-500 text-red-400 hover:text-white border border-red-500/30 py-2.5 rounded-xl font-bold transition shadow-md"
-                  >
-                    Remove Listing 🗑️
-                  </button>
-                ) : (
-                  <button 
-                    onClick={() => setSelectedListing(item)}
-                    className="w-full bg-purple-600 hover:bg-purple-500 text-white py-2.5 rounded-xl font-bold transition shadow-md"
-                  >
-                    Propose Trade 🤝
-                  </button>
-                )}
-              </div>
-            ))}
+                  {item.seller_id === userId ? (
+                    <button 
+                      onClick={() => handleUnlist(item.id)}
+                      className="w-full bg-red-500/10 hover:bg-red-500 text-red-400 hover:text-white border border-red-500/30 py-2.5 rounded-xl font-bold transition shadow-md"
+                    >
+                      Remove Listing 🗑️
+                    </button>
+                  ) : (
+                    <button 
+                      onClick={() => setSelectedListing(item)}
+                      className="w-full bg-purple-600 hover:bg-purple-500 text-white py-2.5 rounded-xl font-bold transition shadow-md"
+                    >
+                      Propose Trade 🤝
+                    </button>
+                  )}
+                </div>
+              );
+            })}
           </div>
         )
       ) : (
