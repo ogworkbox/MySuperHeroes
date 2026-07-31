@@ -64,7 +64,7 @@ export default function Dashboard() {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
 
-const res = await fetch('/api/marketplace', {
+    const res = await fetch('/api/marketplace', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ action: 'list', cardId, userId: user.id }),
@@ -176,47 +176,53 @@ const res = await fetch('/api/marketplace', {
         </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-          {myCards.map((card) => (
-            <div key={card.id} className="bg-slate-800 border-2 border-slate-700 rounded-2xl p-4 shadow-xl flex flex-col justify-between transform hover:-translate-y-1 transition-transform">
-              <div>
-                <div className="w-full aspect-square bg-slate-950 rounded-xl mb-4 overflow-hidden border border-slate-700">
-                  {card.image_url ? (
-                    <img src={card.image_url} alt={card.name} className="w-full h-full object-cover" />
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center text-xs text-slate-500">Generating Image...</div>
-                  )}
-                </div>
-                <div className="flex justify-between items-start mb-2">
-                  <span className="text-xs font-bold uppercase tracking-widest bg-slate-900 px-2.5 py-1 rounded text-amber-400">
-                    {card.rarity}
-                  </span>
-                  <span className="text-sm font-semibold text-slate-400">{card.element}</span>
-                </div>
-                <h3 className="text-xl font-extrabold text-white truncate mb-4">{card.name}</h3>
-                
-                <div className="space-y-1 bg-slate-900/60 p-3 rounded-xl text-sm mb-4">
-                  <div className="flex justify-between"><span>⚔️ Power:</span> <span className="font-bold text-red-400">{card.power}</span></div>
-                  <div className="flex justify-between"><span>⚡ Speed:</span> <span className="font-bold text-sky-400">{card.speed}</span></div>
-                  <div className="flex justify-between"><span>🛡️ Defense:</span> <span className="font-bold text-emerald-400">{card.defense}</span></div>
-                  <div className="flex justify-between"><span>🔮 Magic:</span> <span className="font-bold text-violet-400">{card.magic}</span></div>
-                </div>
-              </div>
-              
-              <div className="border-t border-slate-700/60 pt-3 flex flex-col gap-3">
+          {myCards.map((card) => {
+            const isLegendary = card.rarity === 'Legendary';
+            return (
+              <div 
+                key={card.id} 
+                className={`bg-slate-800 border-2 border-slate-700 rounded-2xl p-4 shadow-xl flex flex-col justify-between transition-all duration-300 hover:scale-105 animate-float ${isLegendary ? 'hologram-shine overflow-hidden border-yellow-400/50 shadow-yellow-500/20' : ''}`}
+              >
                 <div>
-                  <p className="text-xs font-bold text-amber-400 uppercase tracking-tight">Special Move: {card.move_name}</p>
-                  <p className="text-xs text-slate-400 italic line-clamp-2 mt-0.5">"{card.move_desc}"</p>
+                  <div className="w-full aspect-square bg-slate-950 rounded-xl mb-4 overflow-hidden border border-slate-700 flex justify-center items-center">
+                    {card.image_url ? (
+                      <img src={card.image_url} alt={card.name} className="h-full object-contain filter drop-shadow-[0_4px_8px_rgba(0,0,0,0.5)]" />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center text-xs text-slate-500">Generating Image...</div>
+                    )}
+                  </div>
+                  <div className="flex justify-between items-start mb-2">
+                    <span className="text-xs font-bold uppercase tracking-widest bg-slate-900 px-2.5 py-1 rounded text-amber-400">
+                      {card.rarity}
+                    </span>
+                    <span className="text-sm font-semibold text-slate-400">{card.element}</span>
+                  </div>
+                  <h3 className="text-xl font-extrabold text-white truncate mb-4">{card.name}</h3>
+                  
+                  <div className="space-y-1 bg-slate-900/60 p-3 rounded-xl text-sm mb-4">
+                    <div className="flex justify-between"><span>⚔️ Power:</span> <span className="font-bold text-red-400">{card.power}</span></div>
+                    <div className="flex justify-between"><span>⚡ Speed:</span> <span className="font-bold text-sky-400">{card.speed}</span></div>
+                    <div className="flex justify-between"><span>🛡️ Defense:</span> <span className="font-bold text-emerald-400">{card.defense}</span></div>
+                    <div className="flex justify-between"><span>🔮 Magic:</span> <span className="font-bold text-violet-400">{card.magic}</span></div>
+                  </div>
                 </div>
+                
+                <div className="border-t border-slate-700/60 pt-3 flex flex-col gap-3">
+                  <div>
+                    <p className="text-xs font-bold text-amber-400 uppercase tracking-tight">Special Move: {card.move_name}</p>
+                    <p className="text-xs text-slate-400 italic line-clamp-2 mt-0.5">"{card.move_desc}"</p>
+                  </div>
 
-                <button
-                  onClick={() => handleListCard(card.id)}
-                  className="w-full bg-blue-600 hover:bg-blue-500 text-white text-sm py-2 rounded-lg font-bold transition shadow-md"
-                >
-                  List for Trade 🏷️
-                </button>
+                  <button
+                    onClick={() => handleListCard(card.id)}
+                    className="w-full bg-blue-600 hover:bg-blue-500 text-white text-sm py-2 rounded-lg font-bold transition shadow-md"
+                  >
+                    List for Trade 🏷️
+                  </button>
+                </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
     </main>
